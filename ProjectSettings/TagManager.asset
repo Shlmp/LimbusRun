@@ -4,9 +4,8 @@
 TagManager:
   serializedVersion: 3
   tags:
-  - EnemyGround
-  - EnemyAir
-  - EnemyAirCrouch
+  - Obstacle
+  - Projectile
   layers:
   - Default
   - TransparentFX
