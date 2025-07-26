@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using TMPro;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
@@ -34,6 +35,8 @@ public class PlayerController : MonoBehaviour
     [Header("Gameplay")]
     public int maxLives = 3;
     public float damageFlashTime = 0.5f;
+    [SerializeField] private Image shootCooldownImage;
+    [SerializeField] private Image dodgeCooldownImage;
 
     private Rigidbody2D rb;
     private bool canJump = false;
@@ -63,13 +66,20 @@ public class PlayerController : MonoBehaviour
 
         UpdateTimers();
 
+        // Transición automática del salto a correr
+        if (currentState == PlayerState.Jumping && IsGrounded())
+        {
+            SwitchState(PlayerState.Running);
+        }
+
+        // Inicio del juego
         if (currentState == PlayerState.Idle)
         {
-            if (Input.GetKeyDown(KeyCode.Space))
-                StartGame();
+            StartGame();
             return;
         }
 
+        // Movimiento básico
         if (IsGrounded() && currentState != PlayerState.Jumping && currentState != PlayerState.Dodging)
             SwitchState(PlayerState.Running);
 
@@ -89,21 +99,41 @@ public class PlayerController : MonoBehaviour
         }
         else if (Input.GetKeyDown(KeyCode.E))
         {
-            Debug.Log("Disparo en cooldown");
+            Debug.Log("Disparo en cooldown o estado inválido.");
         }
+
         lives.text = "Lives - " + currentLives;
     }
 
+
     private void UpdateTimers()
     {
-        if (shootTimer > 0) shootTimer -= Time.deltaTime;
-        if (dodgeTimer > 0) dodgeTimer -= Time.deltaTime;
+        if (currentState == PlayerState.Jumping && IsGrounded())
+        {
+            SwitchState(PlayerState.Running);
+        }
+
+        if (shootTimer > 0)
+        {
+            shootCooldownImage.gameObject.SetActive(true);
+            shootTimer -= Time.deltaTime;
+            shootCooldownImage.fillAmount = shootTimer / shootCooldown;
+
+        }
+        if (dodgeTimer > 0)
+        {
+            dodgeCooldownImage.gameObject.SetActive(true);
+            dodgeTimer -= Time.deltaTime;
+            dodgeCooldownImage.fillAmount = dodgeTimer / dodgeCooldown;
+        }
+        if (shootTimer == 0) shootCooldownImage.gameObject.SetActive(false);
+        if (dodgeTimer == 0) dodgeCooldownImage.gameObject.SetActive(false);
     }
 
     private void StartGame()
     {
         SwitchState(PlayerState.Running);
-        GameManager.Instance.StartGame(); // Llamada al GameManager, a�n no implementado
+        GameManager.Instance.StartGame();
     }
 
     private void Jump()
@@ -111,6 +141,7 @@ public class PlayerController : MonoBehaviour
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
         SwitchState(PlayerState.Jumping);
     }
+
 
     private IEnumerator Dodge()
     {
@@ -121,6 +152,7 @@ public class PlayerController : MonoBehaviour
         isInvulnerable = false;
         if (IsGrounded())
             SwitchState(PlayerState.Running);
+        dodgeCooldownImage.fillAmount = 1f;
     }
 
     private void Shoot()
@@ -128,11 +160,14 @@ public class PlayerController : MonoBehaviour
         shootTimer = shootCooldown;
         SwitchState(PlayerState.Attacking);
 
-        Instantiate(projectilePrefab, firePoint.position, Quaternion.identity);
+        GameObject bullet = Instantiate(projectilePrefab, firePoint.position, Quaternion.identity);
+        Debug.Log("Instanciado proyectil: " + bullet.name);
 
-        // Volver a correr tras un breve momento
         Invoke(nameof(BackToRunning), 0.3f);
+
+        shootCooldownImage.fillAmount = 1f;
     }
+
 
     private void BackToRunning()
     {
@@ -224,6 +259,15 @@ public class PlayerController : MonoBehaviour
         {
             Debug.Log("Golpe recibido");
             TakeDamage();
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (groundCheck != null)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
         }
     }
 
