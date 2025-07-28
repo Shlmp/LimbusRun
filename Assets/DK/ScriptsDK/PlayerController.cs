@@ -31,6 +31,7 @@ public class PlayerController : MonoBehaviour
     public float shootCooldown = 10f;
     public float dodgeCooldown = 5f;
     public float dodgeDuration = 0.5f;
+    public float shootDuration = 1f;
 
     [Header("Gameplay")]
     public int maxLives = 3;
@@ -95,7 +96,7 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.E) && shootTimer <= 0 && currentState != PlayerState.Jumping && currentState != PlayerState.Dodging)
         {
-            Shoot();
+            StartCoroutine(Shoot());
         }
         else if (Input.GetKeyDown(KeyCode.E))
         {
@@ -155,7 +156,7 @@ public class PlayerController : MonoBehaviour
         dodgeCooldownImage.fillAmount = 1f;
     }
 
-    private void Shoot()
+    private IEnumerator Shoot()
     {
         shootTimer = shootCooldown;
         SwitchState(PlayerState.Attacking);
@@ -163,16 +164,11 @@ public class PlayerController : MonoBehaviour
         GameObject bullet = Instantiate(projectilePrefab, firePoint.position, Quaternion.identity);
         Debug.Log("Instanciado proyectil: " + bullet.name);
 
-        Invoke(nameof(BackToRunning), 0.3f);
-
-        shootCooldownImage.fillAmount = 1f;
-    }
-
-
-    private void BackToRunning()
-    {
+        yield return new WaitForSeconds(shootDuration);
         if (IsGrounded())
             SwitchState(PlayerState.Running);
+
+        shootCooldownImage.fillAmount = 1f;
     }
 
     private bool IsGrounded()
