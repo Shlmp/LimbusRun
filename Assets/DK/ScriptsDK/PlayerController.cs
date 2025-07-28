@@ -32,6 +32,7 @@ public class PlayerController : MonoBehaviour
     public float dodgeCooldown = 5f;
     public float dodgeDuration = 0.5f;
     public float shootDuration = 1f;
+    public float jumpDuration = 1f;
 
     [Header("Gameplay")]
     public int maxLives = 3;
@@ -45,6 +46,7 @@ public class PlayerController : MonoBehaviour
     private float shootTimer;
     private float dodgeTimer;
     private int currentLives;
+    private bool recentlyJumped = false;
     private SpriteRenderer currentSpriteRenderer;
     public TextMeshProUGUI lives;
 
@@ -67,9 +69,9 @@ public class PlayerController : MonoBehaviour
 
         UpdateTimers();
 
-        // Transición automática del salto a correr
-        if (currentState == PlayerState.Jumping && IsGrounded())
+        if (currentState == PlayerState.Jumping && IsGrounded() && !recentlyJumped)
         {
+            Debug.Log("Cambio de salto a correr");
             SwitchState(PlayerState.Running);
         }
 
@@ -79,10 +81,6 @@ public class PlayerController : MonoBehaviour
             StartGame();
             return;
         }
-
-        // Movimiento básico
-        if (IsGrounded() && currentState != PlayerState.Jumping && currentState != PlayerState.Dodging)
-            SwitchState(PlayerState.Running);
 
         if (Input.GetKeyDown(KeyCode.Space) && IsGrounded() && currentState != PlayerState.Dodging)
         {
@@ -109,11 +107,6 @@ public class PlayerController : MonoBehaviour
 
     private void UpdateTimers()
     {
-        if (currentState == PlayerState.Jumping && IsGrounded())
-        {
-            SwitchState(PlayerState.Running);
-        }
-
         if (shootTimer > 0)
         {
             shootCooldownImage.gameObject.SetActive(true);
@@ -139,10 +132,19 @@ public class PlayerController : MonoBehaviour
 
     private void Jump()
     {
+        Debug.Log("SALTANDO");
+
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
         SwitchState(PlayerState.Jumping);
+        StartCoroutine(JumpBuffer());
     }
 
+    private IEnumerator JumpBuffer()
+    {
+        recentlyJumped = true;
+        yield return new WaitForSeconds(0.1f); // espera 100ms
+        recentlyJumped = false;
+    }
 
     private IEnumerator Dodge()
     {
@@ -212,6 +214,8 @@ public class PlayerController : MonoBehaviour
 
     private void SwitchState(PlayerState newState)
     {
+        Debug.Log($"Cambiando a estado: {newState}");
+
         currentState = newState;
 
         // Desactivar todos
